@@ -20,12 +20,12 @@ function train_rl()
 		--ppo_config.model_name="./std/models/gpt2-imdb" \
 		--ppo_config.reward_model=${task_name}:"./std/models/distilbert-imdb" \
 		--ppo_config.query_dataset="./std/datasets/imdb"
-	#accelerate launch --config_file=./multi_gpu.yaml --num_processes ${nproc_per_node} --main_process_port $METIS_WORKER_0_PORT trl_train_with_sft.py
+	#accelerate launch --config_file=./multi_gpu.yaml --num_processes ${nproc_per_node} --main_process_port $xport trl_train_with_sft.py
 	return 0
 
 }
 
-#prepare
+prepare
 train_rl
 
 
