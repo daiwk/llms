@@ -13,6 +13,8 @@ from transformers import AutoTokenizer, pipeline
 from trl import AutoModelForCausalLMWithValueHead, AutoModelForSeq2SeqLMWithValueHead, PPOConfig, PPOTrainer, set_seed
 from trl.core import LengthSampler
 from trl.import_utils import is_xpu_available
+import pandas as pd
+from datasets import Dataset
 
 
 tqdm.pandas()
@@ -80,10 +82,14 @@ def build_dataset(config, query_dataset, input_min_text_length=2, input_max_text
         dataloader (`torch.utils.data.DataLoader`):
             The dataloader for the dataset.
     """
-    tokenizer = AutoTokenizer.from_pretrained(config.model_name)
+    tokenizer = AutoTokenizer.from_pretrained(config.model_name + "_tokenizer")
     tokenizer.pad_token = tokenizer.eos_token
     # load imdb with datasets
-    ds = load_dataset(query_dataset, split="train")
+    # ds = load_dataset(query_dataset, split="train")
+
+    # ds.to_csv("./demo_ppo.csv")
+    df = pd.read_csv(query_dataset)
+    ds = Dataset.from_pandas(df)
     ds = ds.rename_columns({"text": "review"})
     ds = ds.filter(lambda x: len(x["review"]) > 200, batched=False)
 
@@ -101,6 +107,7 @@ def build_dataset(config, query_dataset, input_min_text_length=2, input_max_text
 
 # We retrieve the dataloader by calling the `build_dataset` function.
 dataset = build_dataset(args.ppo_config, args.ppo_config.query_dataset)
+
 
 
 def collator(data):
@@ -128,8 +135,10 @@ model = trl_model_class.from_pretrained(
     peft_config=peft_config,
 )
 
+# model.save_pretrained("./gpt2-imdb")
 
-tokenizer = AutoTokenizer.from_pretrained(args.ppo_config.model_name)
+tokenizer = AutoTokenizer.from_pretrained(args.ppo_config.model_name + "_tokenizer")
+
 
 # Some tokenizers like GPT-2's don't have a padding token by default, so we set one here.
 tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -150,9 +159,11 @@ ds_plugin = ppo_trainer.accelerator.state.deepspeed_plugin
 task, model_name = args.ppo_config.reward_model.split(":")
 if ds_plugin is not None and ds_plugin.is_zero3_init_enabled():
     with ds_plugin.zero3_init_context_manager(enable=False):
-        sentiment_pipe = pipeline(task, model=model_name, device=device)
+        sentiment_pipe = pipeline(task, model=model_name, tokenizer=model_name + "_tokenizer",  device=device)
 else:
-    sentiment_pipe = pipeline(task, model=model_name, device=device)
+    sentiment_pipe = pipeline(task, model=model_name, tokenizer=model_name + "_tokenizer", device=device)
+
+# sentiment_pipe.model.save_pretrained("./distilbert-imdb")
 
 # Some tokenizers like GPT-2's don't have a padding token by default, so we set one here.
 if sentiment_pipe.tokenizer.pad_token_id is None:
@@ -195,3 +206,4 @@ for epoch, batch in tqdm(enumerate(ppo_trainer.dataloader)):
     # Run PPO step
     stats = ppo_trainer.step(query_tensors, response_tensors, rewards)
     ppo_trainer.log_stats(stats, batch, rewards, columns_to_log=["query", "response", "ref_response", "ref_rewards"])
+

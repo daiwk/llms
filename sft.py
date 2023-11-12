@@ -5,11 +5,13 @@ from typing import Optional
 import torch
 from accelerate import Accelerator
 from datasets import load_dataset
+from datasets import Dataset
 from peft import LoraConfig
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments, AutoTokenizer
 
 from trl import SFTTrainer, is_xpu_available
+import pandas as pd
 
 
 tqdm.pandas()
@@ -94,8 +96,16 @@ model = AutoModelForCausalLM.from_pretrained(
     use_auth_token=script_args.use_auth_token,
 )
 
+tokenizer = AutoTokenizer.from_pretrained(script_args.model_name + "_tokenizer")
+
+# model.save_pretrained("./opt-350m")
+
 # Step 2: Load the dataset
-dataset = load_dataset(script_args.dataset_name, split="train")
+# dataset = load_dataset(script_args.dataset_name, split="train")
+# dataset.to_csv("demo_sft_data.csv")
+
+df = pd.read_csv(script_args.dataset_name)
+dataset = Dataset.from_pandas(df)
 
 # Step 3: Define the training arguments
 training_args = TrainingArguments(
@@ -135,9 +145,11 @@ trainer = SFTTrainer(
     train_dataset=dataset,
     dataset_text_field=script_args.dataset_text_field,
     peft_config=peft_config,
+    tokenizer=tokenizer
 )
 
 trainer.train()
 
 # Step 6: Save the model
 trainer.save_model(script_args.output_dir)
+
