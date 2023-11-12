@@ -14,6 +14,9 @@ function train_rl()
 	python3 sft.py \
 		--model_name="./std/models/opt-350m"  \
 		--dataset_name="./std/datasets/openassistant-guanaco"
+        python3 sft_completion_only_lm.py \
+                --model_name="./std/models/opt-350m"  \
+                --dataset_name="./std/datasets/CodeAlpaca-20k"
 
 	task_name=sentiment-analysis
 	python3 ppo.py \
