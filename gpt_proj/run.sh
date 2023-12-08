@@ -1,0 +1,3 @@
+export OPENAI_API_KEY='XXXXXsk-I6OkqI14lZ9DILWUcoMqT3BlbkFJ52ePr3uF8skTAv1ETg0bXXXXX'
+
+python3 req_gpt4v.py
