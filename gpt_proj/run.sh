@@ -1,3 +1,3 @@
-export OPENAI_API_KEY='XXXXXsk-I6OkqI14lZ9DILWUcoMqT3BlbkFJ52ePr3uF8skTAv1ETg0bXXXXX'
-
+source ~/.bashrc
 python3 req_gpt4v.py
+python3 chat_completions.py
